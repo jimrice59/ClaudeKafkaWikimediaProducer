@@ -4,18 +4,32 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Purpose
 
-A Kafka producer that consumes the Wikimedia real-time event stream (SSE) and publishes events to a Kafka topic. This is a tech-prep/learning project.
+A Maven multi-module Spring Boot 3.3 / Java 21 project that bridges the Wikimedia real-time SSE event stream into Apache Kafka.
 
-## Project Status
+- **kafka-producer** — connects to `https://stream.wikimedia.org/v2/stream/recentchange` via Spring WebFlux `WebClient`, filters blank SSE frames, and publishes each JSON payload to the `wikimedia.recentchange` Kafka topic.
+- **kafka-consumer** — listens to `wikimedia.recentchange` and logs each received event. No embedded web server (`spring.main.web-application-type=none`).
 
-This project is newly initialized — no source files exist yet. Update this file once the tech stack and build tooling are chosen.
+Base package: `com.jimrice.wikimedia`
 
-## Intended Architecture
+## Prerequisites
 
-- **Source**: Wikimedia EventStreams SSE endpoint (`https://stream.wikimedia.org/v2/stream/recentchange`)
-- **Sink**: Apache Kafka topic (e.g., `wikimedia.recentchange`)
-- **Role**: Bridges the Wikimedia HTTP SSE stream into Kafka for downstream consumers
+Kafka must be running on `localhost:9092` before starting either module. The topic `wikimedia.recentchange` is auto-created on first use.
 
-## Development Commands
+## Build & Run
 
-_To be filled in once the project language and build tool are chosen (e.g., Maven/Gradle for Java, pip for Python, npm for Node)._
+```bash
+# Build all modules from the root
+mvn clean package -DskipTests
+
+# Run the producer (streams indefinitely via blockLast())
+mvn -pl kafka-producer spring-boot:run
+
+# Run the consumer (separate terminal)
+mvn -pl kafka-consumer spring-boot:run
+```
+
+## Key Design Decisions
+
+- `WikimediaChangesHandler` implements `CommandLineRunner` and calls `blockLast()` on the reactive SSE flux — this keeps the producer JVM alive while the stream runs.
+- The consumer has no HTTP server; `spring-boot-starter` (not webflux/web) is used so no Netty/Tomcat starts.
+- Both modules share `spring-kafka` dependency management from the parent POM.
