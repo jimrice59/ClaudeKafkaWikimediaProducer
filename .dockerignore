@@ -1,0 +1,6 @@
+.git
+target/
+kafka-producer/target/
+kafka-consumer/target/
+*.md
+.claude/
