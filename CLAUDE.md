@@ -44,7 +44,7 @@ mvn -pl kafka-consumer spring-boot:run
 
 ## Key Design Decisions
 
-- `WikimediaChangesHandler` implements `CommandLineRunner` and calls `blockLast()` on the reactive SSE flux — this keeps the producer JVM alive while the stream runs.
+- `WikimediaChangesHandler` implements `CommandLineRunner` because the SSE stream must start after the full application context is ready (Kafka wired, beans initialized) but has no natural trigger — no HTTP endpoint, no schedule, no event. `CommandLineRunner.run()` is Spring Boot's hook for "execute once at startup." The `blockLast()` call at the end keeps the JVM alive; without it `run()` would return, Spring would see no active threads, and the app would exit.
 - The consumer has no HTTP server; `spring-boot-starter` (not webflux/web) is used so no Netty/Tomcat starts.
 - Both modules share `spring-kafka` dependency management from the parent POM.
 - Dockerfiles copy POMs before source so Maven dependency resolution is a separate cached layer — rebuilds after source-only changes skip the slow `dependency:go-offline` step.
